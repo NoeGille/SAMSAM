@@ -1,0 +1,8 @@
+title = "Config"
+
+[cytomine]
+dataset_path = "../datasets/chu_anapath/"
+project_id = '24796414'
+annotation_user_id = '24768144'
+keep_empty_roi = false     # Keep ROI without annotation in the dataset
+ROI_term_id = '25635386'
