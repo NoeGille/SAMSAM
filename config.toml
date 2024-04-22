@@ -6,3 +6,12 @@ project_id = '24796414'
 annotation_user_id = '24768144'
 keep_empty_roi = false     # Keep ROI without annotation in the dataset
 ROI_term_id = '25635386'
+
+[sam]
+model_type = 'vit_h'    #'vit_b', 'vit_l', 'vit_h'
+checkpoint_path = '../checkpoints/sam_vit_h_4b8939.pth'
+device = 'cuda'
+
+[evaluation]
+prompt_type='points'    # 'box', 'points', 'None'
+n_points = 100
