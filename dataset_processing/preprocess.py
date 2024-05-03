@@ -5,7 +5,7 @@ import torch
 
 
 def collate_fn(batch:list[tuple[dict, np.ndarray]]):
-    '''Collate function for the DataLoader. To use when creating a DataLoader'''
+    '''Collate function for torch DataLoader. To use when creating a DataLoader'''
     batched_data = []
     batched_mask = []
     for data, mask in batch:
@@ -15,7 +15,7 @@ def collate_fn(batch:list[tuple[dict, np.ndarray]]):
 
 def to_dict(img:np.ndarray, prompts:dict[str, np.ndarray], device:str='cuda') -> dict:
     '''Convert an element from an AbstractSAMDataset to a valid dictionnary regarding 
-    Sam class, forward method specification.'''
+    Sam class forward method specification.'''
     processed_img = torch.from_numpy(img.copy()).permute(2, 0, 1).float().to(device)
     original_size = img.shape[:2]
     output = {'image': processed_img, 'original_size': original_size}

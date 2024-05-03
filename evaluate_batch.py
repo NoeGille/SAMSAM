@@ -3,13 +3,12 @@ from argparse import ArgumentParser
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+from dataset_processing.dataset import SAMDataset
+from dataset_processing.preprocess import collate_fn
 from segment_anything.build_sam import build_sam_vit_b
 from sklearn.metrics import f1_score, jaccard_score, precision_score, recall_score
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-
-from dataset_processing.dataset import ChuAnapath
-from dataset_processing.preprocess import collate_fn
 from utils.config import load_config
 
 parser = ArgumentParser(description='Evaluate a batch of images using a trained model.')
@@ -23,9 +22,9 @@ prompt_type = {'points':config.dataset.points, 'box':config.dataset.box, 'neg_po
 n_points = config.dataset.n_points
 inside_box = config.dataset.negative_points_inside_box
 points_near_center = config.dataset.points_near_center
+random_box_shift = config.dataset.random_box_shift
 
-
-dataset = ChuAnapath(dataset_path, prompt_type=prompt_type, n_points=n_points, verbose=True, to_dict=True, neg_points_inside_box=inside_box, points_near_center=points_near_center)
+dataset = SAMDataset(dataset_path, prompt_type=prompt_type, n_points=n_points, verbose=True, to_dict=True, neg_points_inside_box=inside_box, points_near_center=points_near_center, random_box_shift=random_box_shift)
 dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False, collate_fn=collate_fn)
 model = build_sam_vit_b(config.sam.checkpoint_path)
 model.to('cuda')

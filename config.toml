@@ -21,8 +21,9 @@ negative_points = false
 box = true
 negative_points_inside_box = true
 n_points = 5
-points_near_center = 4.0 # The higher the value, the closer to the center of mask the points have a chance to be. -1 means no restriction
+points_near_center = -1 # The higher the value, the closer to the center of mask the points have a chance to be. -1 means no restriction
 box_size = 1.0
+random_box_shift = 0 # Random shift in the box position in pixels (simulates the annotation error of an expert)
 
 [training]
 batch_size = 2

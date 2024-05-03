@@ -39,7 +39,7 @@ class AbstractSAMDataset(Dataset, ABC):
         '''Load images and masks'''
         pass
 
-    def _load_prompt(self, zoom_out:float=1.0, n_points:int=1, inside_box:bool=False, near_center:float=-1) -> dict[str, np.ndarray]:
+    def _load_prompt(self, zoom_out:float=1.0, n_points:int=1, inside_box:bool=False, near_center:float=-1, random_box_shift:int=0) -> dict[str, np.ndarray]:
         '''Compute and load prompts for the dataset'''
         prompts = {'points':[None for _ in range(len(self.images))], 
                    'box':[None for _ in range(len(self.images))], 
@@ -49,7 +49,7 @@ class AbstractSAMDataset(Dataset, ABC):
         if self.prompt_type['points']:
             prompts['points'] = np.array([self._get_points(self.masks[i], n_points, near_center) for i in tqdm(range(len(self.images)), desc='Computing points...', total=len(self.images), disable=not self.verbose)])
         if self.prompt_type['box']:
-            prompts['box'] = np.array([self._get_box(self.masks[i], zoom_out) for i in tqdm(range(len(self.images)), desc='Computing boxes...', total=len(self.images), disable=not self.verbose)])
+            prompts['box'] = np.array([self._get_box(self.masks[i], zoom_out, random_box_shift) for i in tqdm(range(len(self.images)), desc='Computing boxes...', total=len(self.images), disable=not self.verbose)])
         self.prompts = prompts
 
     def _get_points(self, mask_path:str, n_points:int=1, near_center:float=-1):
@@ -82,7 +82,7 @@ class AbstractSAMDataset(Dataset, ABC):
         points = np.stack((y, x), axis=1)
         return points
     
-    def _get_box(self, mask_path:str, zoom_out:float=1.0) -> tuple[int, int, int, int]:
+    def _get_box(self, mask_path:str, zoom_out:float=1.0, random_box_shift:int=0) -> tuple[int, int, int, int]:
         '''Get a box from the mask
         zoom_out: float, factor to zoom out the box. Add a margin around the mask.'''
         assert zoom_out > 0, 'Zoom out factor must be greater than 0'
@@ -98,10 +98,13 @@ class AbstractSAMDataset(Dataset, ABC):
         box_height = y_max - y_min
         h_padding = (box_width * zoom_out - box_width)  / 2
         v_padding = (box_height * zoom_out - box_height) / 2
-        x_min = max(0, x_min - h_padding)
-        x_max = min(mask.shape[0], x_max + h_padding)
-        y_min = max(0, y_min - v_padding)
-        y_max = min(mask.shape[1], y_max + v_padding)
+        shifts = [0, 0, 0, 0]
+        if random_box_shift > 0:
+            shifts = np.random.randint(-random_box_shift, 2*random_box_shift, 4)
+        x_min = max(0, x_min - h_padding + shifts[0])
+        x_max = min(mask.shape[0], x_max + h_padding + shifts[1])
+        y_min = max(0, y_min - v_padding + shifts[2])
+        y_max = min(mask.shape[1], y_max + v_padding + shifts[3])
         return int(x_min), int(y_min), int(x_max), int(y_max)
 
     def __len__(self):
@@ -117,11 +120,11 @@ class AbstractSAMDataset(Dataset, ABC):
             return to_dict(img, prompt), np.where(mask > 0, 1, 0)
         return img, np.where(mask > 0, 1, 0), prompt
 
-class ChuAnapath(AbstractSAMDataset):
-    '''Chu Anapath dataset for segmentation.'''
+class SAMDataset(AbstractSAMDataset):
+    '''Prepare a dataset for segmentation by Segment Anything Model. Checkout AbstractSAMDataset for more information'''
 
-    def __init__(self, root:str, transform=None, prompt_type:dict={'points':False, 'box': False, 'neg_points':False}, n_points:int=1, zoom_out:float=1.0, verbose:bool=False, random_state:int=None, to_dict:bool=True, neg_points_inside_box:bool=False, points_near_center:float=-1):
-        '''Initialize ChuAnapath dataset.
+    def __init__(self, root:str, transform=None, prompt_type:dict={'points':False, 'box': False, 'neg_points':False}, n_points:int=1, zoom_out:float=1.0, verbose:bool=False, random_state:int=None, to_dict:bool=True, neg_points_inside_box:bool=False, points_near_center:float=-1, random_box_shift:int=0):
+        '''Initialize SAMDataset class.
         root: str, path to the dataset directory
         prompt_type: Dict[str, bool], type of automatic annotation to use
         n_points: int, number of points to use for automatic annotation if prompt is 'points'.
@@ -143,7 +146,7 @@ class ChuAnapath(AbstractSAMDataset):
         if self.verbose:
             print('Loading images and masks paths...')
         self._load_data()
-        self._load_prompt(zoom_out=zoom_out, n_points=n_points, inside_box=neg_points_inside_box, near_center=points_near_center)
+        self._load_prompt(zoom_out=zoom_out, n_points=n_points, inside_box=neg_points_inside_box, near_center=points_near_center, random_box_shift=random_box_shift)
         if self.verbose:
             print('Done!')
 
