@@ -10,13 +10,13 @@ random_state = 42
 zoom_out_factor = 2.0  # Zoom out factor for the crop around the annotation, 1.0 means no zoom out
 
 [sam]
-model_type = 'vit_b'    #'vit_b', 'vit_l', 'vit_h'
+model_type = 'vit_h'    #'vit_b', 'vit_l', 'vit_h'
 checkpoint_path = '../checkpoints/sam_vit_b_01ec64.pth'
 device = 'cuda'
 input_size = 1024
 
 [dataset]
-points = true
+points = false
 negative_points = false
 box = true
 negative_points_inside_box = true

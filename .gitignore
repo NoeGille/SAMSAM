@@ -161,3 +161,12 @@ cython_debug/
 
 # API keys
 keys.toml
+
+# Torch
+*.pth
+*.pt
+
+# Specified files
+gridsearch.bat
+test_batch.ipynb
+visualisation.ipynb
