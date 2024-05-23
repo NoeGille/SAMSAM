@@ -53,12 +53,28 @@ Please refers to the Cytomine API Documentation for more information. https://do
 
 It is recommended to use the SAMDataset class from `dataset_processing/dataset.py` to load the data and give it to the model. The class handle the processing of the data including automatic annotation of the data.
 
+SAM is used throught a child class named TrainableSam. This class simplifies the use of SAM in a training pipeline without changing the inner functioning of SAM.
+
 ### Evaluation
 
-As it is not mandatory to fine-tune the model, you can directly evaluate the model on your dataset. You can refer to evaluate_batch.py in this case
+As it is not mandatory to fine-tune the model, you can directly evaluate the model on your dataset. You can refer to evaluate.py in this case
 
 ### Training
 
-Not implemented yet
+Training is done through the TrainableSam class. You can refer to train.py in this case. You can either train the whole model (including the image encoder) or only the prompt encoder and decoder. In the latter case, use `save_img_embeddings.py` to save the image embeddings then `use_img_embeddings option` in `config.toml` to skip the image encoder part for faster training.
 
+### Thanks
+For the loss function implementation, thanks to Ma et al. .
+```bibtex	
+@article{LossOdyssey,
+title = {Loss Odyssey in Medical Image Segmentation},
+journal = {Medical Image Analysis},
+volume = {71},
+pages = {102035},
+year = {2021},
+author = {Jun Ma and Jianan Chen and Matthew Ng and Rui Huang and Yu Li and Chen Li and Xiaoping Yang and Anne L. Martel}
+doi = {https://doi.org/10.1016/j.media.2021.102035},
+url = {https://www.sciencedirect.com/science/article/pii/S1361841521000815}
+}
+```
 ## <!> This works is currently under development <!>
