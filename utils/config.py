@@ -1,7 +1,6 @@
 '''If you don't want to use the Box class, you can remove Box instantiation and use config as a dictionary.'''
-from tomllib import load
-
 from box import Box
+from tomli import load
 
 
 def load_config(config_path:str):

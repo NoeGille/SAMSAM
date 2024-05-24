@@ -272,7 +272,7 @@ class AugmentedSamDataset(SAMDataset):
         random_box_shift: int, if greater than 0, the bounding box corners will be shifted randomly by a value between -random_box_shift and random_box_shift
         mask_prompt_type: str, type of mask to use for automatic annotation. Can be 'truth' or 'morphology' or 'scribble'. Default is 'truth'.
         '''
-        prompt_type = {'points':False, 'box':True, 'neg_points':False, 'mask':True}
+        prompt_type = {'points':True, 'box':True, 'neg_points':True, 'mask':True}
         neg_points_inside_box = True
         points_near_center = 4
         box_around_mask = False

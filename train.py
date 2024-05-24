@@ -83,7 +83,7 @@ def train_loop(model:Sam, trainloader:DataLoader, optimizer:Optimizer, epochs:in
             if use_wandb:
                 wandb.log({"dice": scores["dice"], "iou": scores["iou"], "precision": scores["precision"], "recall": scores["recall"]})
             if best_loss > scores['dice']:
-                best_loss = scores['dice']
+                best_loss = scores['dice'] 
                 torch.save(model.state_dict(), f'{model_save_dir}/best_model.pt')
     return scores
 
