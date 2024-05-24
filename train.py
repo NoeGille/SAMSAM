@@ -51,7 +51,7 @@ def train_with_config(config:dict):
     else:
         return train_loop(model, trainloader, optimizer, config.training.epochs, loss_fn, None, config.training.model_save_dir, config.misc.device, use_wandb=config.misc.wandb)
 
-def train_loop(model:Sam, trainloader:DataLoader, optimizer:Optimizer, epochs:int, loss_fn:callable, evalloader:DataLoader=None, model_save_dir:str=None, device:str='cuda', verbose:bool=True, use_wandb:bool=False) -> dict[str,list] | dict[str,float]:
+def train_loop(model:Sam, trainloader:DataLoader, optimizer:Optimizer, epochs:int, loss_fn:callable, evalloader:DataLoader=None, model_save_dir:str=None, device:str='cuda', verbose:bool=True, use_wandb:bool=False) -> dict:
     '''Function to train a model on a dataloader.
     model: nn.Module, model to train
     trainloader: DataLoader, dataloader to use for the training

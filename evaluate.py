@@ -4,13 +4,14 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from cv2 import INTER_NEAREST, resize
-from dataset_processing.dataset import SAMDataset
-from dataset_processing.preprocess import collate_fn
-from model.model import load_model
 from sklearn.metrics import f1_score, jaccard_score, precision_score, recall_score
 from torch import nn
 from torch.utils.data import DataLoader
 from tqdm import tqdm
+
+from dataset_processing.dataset import SAMDataset
+from dataset_processing.preprocess import collate_fn
+from model.model import load_model
 from utils.config import load_config
 
 IMG_RESOLUTION = 1024
@@ -57,7 +58,7 @@ def evaluate_with_config(config:dict) -> dict[str,list]:
     scores = eval_loop(model, dataloader, config.misc.device, config.evaluate.input_mask_eval, return_mean=False)
     return scores
 
-def eval_loop(model:nn.Module, dataloader:DataLoader, device:str='cuda', input_mask_eval:bool=False, return_mean:bool=True) -> dict[str,list] | dict[str,float]:
+def eval_loop(model:nn.Module, dataloader:DataLoader, device:str='cuda', input_mask_eval:bool=False, return_mean:bool=True) -> dict:
     '''Function to evaluate a model on a dataloader.
     model: nn.Module, model to evaluate
     dataloader: DataLoader, dataloader to use for the evaluation

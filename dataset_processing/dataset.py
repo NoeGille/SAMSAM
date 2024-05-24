@@ -165,7 +165,7 @@ class AbstractSAMDataset(Dataset, ABC):
     def __len__(self):
         return len(self.images)
 
-    def __getitem__(self, idx:int) -> tuple[np.ndarray, np.ndarray, Sequence] | tuple[dict, np.ndarray]:
+    def __getitem__(self, idx:int) -> tuple:
         img = plt.imread(self.images[idx])
         mask = plt.imread(self.masks[idx])
         prompt = {'points':self.prompts['points'][idx], 'box':self.prompts['box'][idx], 'neg_points':self.prompts['neg_points'][idx], 'mask':self.prompts['mask'][idx]}
@@ -238,7 +238,7 @@ class SAMDataset(AbstractSAMDataset):
         for f in os.listdir(self.root + 'img_embeddings/'):
             self.img_embeddings.append(torch.load(self.root + 'img_embeddings/' + f))
 
-    def __getitem__(self, idx:int) -> tuple[np.ndarray, np.ndarray, Sequence] | tuple[dict, np.ndarray]:
+    def __getitem__(self, idx:int) -> tuple:
         img = plt.imread(self.images[idx])
         mask = plt.imread(self.masks[idx])
         prompt = {'points':self.prompts['points'][idx], 'box':self.prompts['box'][idx], 'neg_points':self.prompts['neg_points'][idx], 'mask':self.prompts['mask'][idx]}
@@ -293,7 +293,7 @@ class AugmentedSamDataset(SAMDataset):
             self.masks = [plt.imread(mask) for mask in self.masks]
             
 
-    def __getitem__(self, idx:int) -> tuple[np.ndarray, np.ndarray, Sequence] | tuple[dict, np.ndarray]:
+    def __getitem__(self, idx:int) -> tuple:
         img_idx = idx % len(self.images)
         prompt_idx = idx // len(self.images)
         if self.load_on_cpu:
