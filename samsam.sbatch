@@ -15,5 +15,4 @@
 conda activate samsam # CHANGEME
 
 # Run your Python script
-cd path/to/mnist # CHANGEME
-python mnist.py
+python train.py
