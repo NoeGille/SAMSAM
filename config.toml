@@ -12,8 +12,8 @@ zoom_out_factor = 2.0  # Zoom out factor for the crop around the annotation, 1.0
 
 [sam]
 model_type = 'vit_b'    #'vit_b', 'vit_l', 'vit_h'
-#checkpoint_path = '../checkpoints/sam_vit_b_01ec64.pth'
-checkpoint_path = '../checkpoints/train/best_model.pt'
+checkpoint_path = '../checkpoints/sam_vit_b_01ec64.pth'
+#checkpoint_path = '../checkpoints/train/best_model.pt'
 input_size = 1024
 
 [dataset]
