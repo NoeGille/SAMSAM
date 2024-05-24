@@ -1,4 +1,4 @@
-cytomine_python_client==2.9.0
+cytomine_python_client==3.0.0
 matplotlib==3.7.1
 numpy==1.26.4
 opencv_python==4.9.0.80
