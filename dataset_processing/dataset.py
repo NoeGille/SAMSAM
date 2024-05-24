@@ -258,7 +258,8 @@ class AugmentedSamDataset(SAMDataset):
 
     def __init__(self, root:str, use_img_embeddings:bool=True,
                  n_points:int=1, n_neg_points:int=1, zoom_out:float=1.0, verbose:bool=False, 
-                 random_state:int=None, to_dict:bool=True, random_box_shift:int=20, mask_prompt_type:str='truth'):
+                 random_state:int=None, to_dict:bool=True, random_box_shift:int=20, mask_prompt_type:str='truth',
+                 load_on_cpu:bool=False):
         '''Initialize SAMDataset class.
         root: str, path to the dataset directory
         transform: callable, transform to apply to the images and masks
@@ -271,6 +272,7 @@ class AugmentedSamDataset(SAMDataset):
         to_dict: bool, if True, the __getitem__ method will return a dictionary with the image, the prompt and the mask. If False, it will return the image, the mask and the prompt.
         random_box_shift: int, if greater than 0, the bounding box corners will be shifted randomly by a value between -random_box_shift and random_box_shift
         mask_prompt_type: str, type of mask to use for automatic annotation. Can be 'truth' or 'morphology' or 'scribble'. Default is 'truth'.
+        load_on_cpu: bool, if True, the entire dataset will be loaded on the CPU RAM. Data loading will be faster but will consume more memory. Default: False
         '''
         prompt_type = {'points':True, 'box':True, 'neg_points':True, 'mask':True}
         neg_points_inside_box = True
@@ -285,12 +287,21 @@ class AugmentedSamDataset(SAMDataset):
                          random_box_shift=random_box_shift, 
                          mask_prompt_type=mask_prompt_type, 
                          box_around_mask=box_around_mask)
+        self.load_on_cpu = load_on_cpu
+        if load_on_cpu:
+            self.images = [plt.imread(img) for img in self.images]
+            self.masks = [plt.imread(mask) for mask in self.masks]
+            
 
     def __getitem__(self, idx:int) -> tuple[np.ndarray, np.ndarray, Sequence] | tuple[dict, np.ndarray]:
         img_idx = idx % len(self.images)
         prompt_idx = idx // len(self.images)
-        img = plt.imread(self.images[img_idx])
-        mask = plt.imread(self.masks[img_idx])
+        if self.load_on_cpu:
+            img = self.images[img_idx]
+            mask = self.masks[img_idx]
+        else:
+            img = plt.imread(self.images[img_idx])
+            mask = plt.imread(self.masks[img_idx])
         prompt = {'points':None, 'box':None, 'neg_points':None, 'mask':None}
         prompts_combinaisons = [['mask', 'points', 'neg_points'],
                                 ['mask'],

@@ -5,15 +5,16 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import wandb
-from dataset_processing.dataset import AugmentedSamDataset
-from dataset_processing.preprocess import collate_fn
-from evaluate import eval_loop
-from model.model import load_model
 from segment_anything.modeling.sam import Sam
 from torch.nn import BCEWithLogitsLoss
 from torch.optim import Optimizer
 from torch.utils.data import DataLoader, random_split
 from tqdm import tqdm
+
+from dataset_processing.dataset import AugmentedSamDataset
+from dataset_processing.preprocess import collate_fn
+from evaluate import eval_loop
+from model.model import load_model
 from utils.config import load_config
 from utils.focal_loss import SamLoss
 
@@ -34,6 +35,7 @@ def train_with_config(config:dict):
                             random_box_shift=config.dataset.random_box_shift,
                             mask_prompt_type=config.dataset.mask_prompt_type,
                             #box_around_mask=config.dataset.box_around_prompt_mask
+                            load_on_cpu=False
     )
     if config.misc.wandb:
         wandb.init(project='samsam',
