@@ -35,7 +35,7 @@ def train_with_config(config:dict):
                             random_box_shift=config.dataset.random_box_shift,
                             mask_prompt_type=config.dataset.mask_prompt_type,
                             #box_around_mask=config.dataset.box_around_prompt_mask
-                            load_on_cpu=False
+                            load_on_cpu=True
     )
     if config.misc.wandb:
         wandb.init(project='samsam',

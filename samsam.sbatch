@@ -5,7 +5,7 @@
 #SBATCH --job-name=samsam            # Name of the job 
 #SBATCH --export=ALL                # Export all environment variables
 #SBATCH --output=samsam-output.log   # Log-file (important!)
-#SBATCH --cpus-per-task=4           # Number of CPU cores to allocate
+#SBATCH --cpus-per-task=6           # Number of CPU cores to allocate
 #SBATCH --mem-per-cpu=24G            # Memory to allocate per allocated CPU core
 #SBATCH --gres=gpu:1                # Number of GPU's
 #SBATCH --time=10:00:00              # Max execution time

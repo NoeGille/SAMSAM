@@ -2,9 +2,12 @@ title = "Config"
 
 [cytomine]
 dataset_path = "../datasets/merged/"
-project_id = '51066666'
+project_id = '10688948'
 # list of users to consider for the annotations
-annotation_users_id = ['701', '23245043', '34451686', '8106092']
+# LBTD
+#annotation_users_id = ['701', '23245043', '34451686', '8106092']
+# Camelyon16
+annotation_users_id = ['10695763']
 ROI_term_id = '25635386'
 random_shift = 0
 random_state = 42

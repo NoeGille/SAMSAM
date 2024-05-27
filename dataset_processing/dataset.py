@@ -274,7 +274,7 @@ class AugmentedSamDataset(SAMDataset):
         mask_prompt_type: str, type of mask to use for automatic annotation. Can be 'truth' or 'morphology' or 'scribble'. Default is 'truth'.
         load_on_cpu: bool, if True, the entire dataset will be loaded on the CPU RAM. Data loading will be faster but will consume more memory. Default: False
         '''
-        prompt_type = {'points':True, 'box':True, 'neg_points':True, 'mask':True}
+        prompt_type = {'points':False, 'box':False, 'neg_points':False, 'mask':False}
         neg_points_inside_box = True
         points_near_center = 4
         box_around_mask = False
@@ -291,6 +291,8 @@ class AugmentedSamDataset(SAMDataset):
         if load_on_cpu:
             self.images = [plt.imread(img) for img in self.images]
             self.masks = [plt.imread(mask) for mask in self.masks]
+        self.prompts = torch.load(self.root + 'prompts.pt')
+        prompt_type = {'points':True, 'box':True, 'neg_points':True, 'mask':True}
             
 
     def __getitem__(self, idx:int) -> tuple:

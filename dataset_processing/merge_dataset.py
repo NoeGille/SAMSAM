@@ -33,5 +33,5 @@ def copy_file(file_path:str, new_file_path:str) -> None:
 
 if __name__ == '__main__':
     root = '../../datasets/merged/'
-    datasets = ['../../datasets/camelyon16/processed/', '../../datasets/LBTD-NEO04/processed/']
+    datasets = ['../../datasets/camelyon16.1/processed/', '../../datasets/LBTD-NEO04/processed/']
     merge_datasets(root, datasets)

@@ -4,10 +4,11 @@ from argparse import ArgumentParser
 
 import numpy as np
 import torch
-from dataset_processing.dataset import SAMDataset
-from model.model import TrainableSam, load_model
 from torch.utils.data import DataLoader
 from tqdm import tqdm
+
+from dataset_processing.dataset import SAMDataset
+from model.model import TrainableSam, load_model
 from utils.config import load_config
 
 
@@ -35,9 +36,26 @@ def save_img_embeddings(config:dict):
         os.makedirs(f'{config.cytomine.dataset_path}img_embeddings/', exist_ok=True)
         torch.save(img_embedding, f'{config.cytomine.dataset_path}img_embeddings/{file_name}.pt')
 
+def save_prompts(config:dict):
+    dataset = SAMDataset(root=config.cytomine.dataset_path,
+                            prompt_type={'points':True, 'box':True, 'neg_points':True, 'mask':True},
+                            n_points=config.dataset.n_points,
+                            n_neg_points=config.dataset.n_neg_points,
+                            verbose=True,
+                            to_dict=True,
+                            neg_points_inside_box=config.dataset.negative_points_inside_box,
+                            points_near_center=config.dataset.points_near_center,
+                            random_box_shift=config.dataset.random_box_shift,
+                            mask_prompt_type=config.dataset.mask_prompt_type,
+                            box_around_mask=config.dataset.box_around_prompt_mask)
+    prompts = dataset.prompts
+    torch.save(prompts, f'{config.cytomine.dataset_path}prompts.pt')
+
+
 if __name__ == '__main__':
     parser = ArgumentParser(description='Save img embeddings in file for further use. Allows to train SAM model without touching its image encoder')
     parser.add_argument('--config', required=False, type=str, help='Path to the configuration file. Default: config.toml', default='config.toml')
     args = parser.parse_args()
     config = load_config(args.config)
     save_img_embeddings(config)
+    save_prompts(config)
