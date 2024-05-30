@@ -37,7 +37,7 @@ box_around_prompt_mask = false
 input_mask_eval = false
 
 [training]
-batch_size = 16
+batch_size = 4
 epochs = 100
 eval_every_epoch = true # Performs evaluation at the end of each epoch
 splits = [0.8, 0.2] # Train, validation

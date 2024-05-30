@@ -5,16 +5,15 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import wandb
+from dataset_processing.dataset import AugmentedSamDataset
+from dataset_processing.preprocess import collate_fn
+from evaluate import eval_loop
+from model.model import load_model
 from segment_anything.modeling.sam import Sam
 from torch.nn import BCEWithLogitsLoss
 from torch.optim import Optimizer
 from torch.utils.data import DataLoader, random_split
 from tqdm import tqdm
-
-from dataset_processing.dataset import AugmentedSamDataset
-from dataset_processing.preprocess import collate_fn
-from evaluate import eval_loop
-from model.model import load_model
 from utils.config import load_config
 from utils.focal_loss import SamLoss
 
@@ -44,7 +43,6 @@ def train_with_config(config:dict):
     trainloader = DataLoader(train_dataset, batch_size=config.training.batch_size, shuffle=True, collate_fn=collate_fn)
     evalloader = DataLoader(eval_dataset, batch_size=config.training.batch_size, shuffle=False, collate_fn=collate_fn)
     optimizer = torch.optim.Adam(model.parameters(), lr=config.training.lr)
-    loss_fn = SamLoss(dc_weight=1/20)
     loss_fn = BCEWithLogitsLoss()
     if config.training.eval_every_epoch:
         return train_loop(model, trainloader, optimizer, config.training.epochs, loss_fn, evalloader, config.training.model_save_dir, config.misc.device, use_wandb=config.misc.wandb)
