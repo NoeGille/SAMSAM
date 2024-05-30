@@ -10,6 +10,7 @@ from dataset_processing.preprocess import collate_fn
 from evaluate import eval_loop
 from model.model import load_model
 from segment_anything.modeling.sam import Sam
+from torch import nn
 from torch.nn import BCEWithLogitsLoss
 from torch.optim import Optimizer
 from torch.utils.data import DataLoader, random_split
@@ -22,6 +23,7 @@ def train_with_config(config:dict):
     '''Train a model with a configuration dictionary. Please refers to load_config() function from .utils.config.'''
     model = load_model(config.sam.checkpoint_path, config.sam.model_type, img_embeddings_as_input=config.training.use_img_embeddings, return_iou=True).to(device=config.misc.device)
     print(model.get_nb_parameters(img_encoder=True))
+    model = nn.DataParallel(model, device_ids=[0, 1])
     dataset = AugmentedSamDataset(root=config.cytomine.dataset_path,
                             #prompt_type={'points':config.dataset.points, 'box':config.dataset.box, 'neg_points':config.dataset.negative_points, 'mask':config.dataset.mask_prompt},
                             n_points=config.dataset.n_points,
