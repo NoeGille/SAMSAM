@@ -69,6 +69,7 @@ def train_loop(model:Sam, trainloader:DataLoader, optimizer:Optimizer, epochs:in
             optimizer.zero_grad()
             #pred_model, pred_iou = model(data, multimask_output=True)
             pred_model, pred_iou = model(data, multimask_output=True)
+            print('outside model')
             loss = loss_fn(pred_model.float(), mask.float())
             loss.backward()
             optimizer.step()
