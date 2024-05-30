@@ -9,6 +9,7 @@
 #SBATCH --mem-per-cpu=20G            # Memory to allocate per allocated CPU core
 #SBATCH --gres=gpu:2                # Number of GPU's
 #SBATCH --time=10:00:00              # Max execution time
+#SBATCH --partition=debug              # Partition to submit to
 #
 
 # Activate your Anaconda environment
