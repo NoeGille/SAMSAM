@@ -50,4 +50,4 @@ train_from_last_checkpoint = false
 
 [misc]
 device = 'cuda' # 'cuda' or 'cpu'
-wandb = false # If true, logs the training in wandb
+wandb = true # If true, logs the training in wandb
