@@ -6,8 +6,8 @@
 #SBATCH --export=ALL                # Export all environment variables
 #SBATCH --output=samsam-output.log   # Log-file (important!)
 #SBATCH --cpus-per-task=1           # Number of CPU cores to allocate
-#SBATCH --mem-per-cpu=20G            # Memory to allocate per allocated CPU core
-#SBATCH --gres=gpu:2                # Number of GPU's
+#SBATCH --mem-per-cpu=40G            # Memory to allocate per allocated CPU core
+#SBATCH --gres=gpu:1                # Number of GPU's
 #SBATCH --time=48:00:00              # Max execution time
 
 # Activate your Anaconda environment
