@@ -35,7 +35,7 @@ def train_with_config(config:dict):
                             #points_near_center=config.dataset.points_near_center,
                             random_box_shift=config.dataset.random_box_shift,
                             mask_prompt_type=config.dataset.mask_prompt_type,
-                            #box_around_mask=config.dataset.box_around_prompt_mask
+                            #box_around_mask=config.dataset.box_around_prompt_mask,
                             load_on_cpu=True
     )
     if config.misc.wandb:
@@ -46,6 +46,12 @@ def train_with_config(config:dict):
     evalloader = DataLoader(eval_dataset, batch_size=config.training.batch_size, shuffle=False, collate_fn=collate_fn)
     optimizer = torch.optim.Adam(model.parameters(), lr=config.training.lr)
     loss_fn = BCEWithLogitsLoss()
+    if config.training.train_from_last_checkpoint:
+        checkpoint = torch.load(config.training.model_save_dir+'/last_checkpoint.pt')
+        model.load_state_dict(torch.load(config.training.model_save_dir+'/last_model.pt'))
+        optimizer.load_state_dict(checkpoint['optimizer'])
+        return train_from_last_checkpoint(model, trainloader, optimizer, config.training.epochs, loss_fn, evalloader, config.training.model_save_dir, config.misc.device, use_wandb=config.misc.wandb, last_epoch=checkpoint['epoch'])
+    
     if config.training.eval_every_epoch:
         return train_loop(model, trainloader, optimizer, config.training.epochs, loss_fn, evalloader, config.training.model_save_dir, config.misc.device, use_wandb=config.misc.wandb)
     else:
@@ -69,7 +75,46 @@ def train_loop(model:Sam, trainloader:DataLoader, optimizer:Optimizer, epochs:in
             optimizer.zero_grad()
             #pred_model, pred_iou = model(data, multimask_output=True)
             pred_model, pred_iou = model(data, multimask_output=True)
-            print('outside model')
+            loss = loss_fn(pred_model.float(), mask.float())
+            loss.backward()
+            optimizer.step()
+            losses.append(loss.item())
+        
+        if verbose:
+            print(f'Loss: {sum(losses)/len(losses)}')
+        if model_save_dir is not None:
+            torch.save(model.state_dict(), f'{model_save_dir}/last_model.pt')
+            torch.save({'epoch': epoch, 'optimizer': optimizer.state_dict()}, f'{model_save_dir}/last_checkpoint.pt')
+        if evalloader is not None:
+            scores = eval_loop(model, evalloader, device)
+            print(f'Evaluation - Dice: {scores["dice"]}, IoU: {scores["iou"]}, Precision: {scores["precision"]}, Recall: {scores["recall"]}')
+            if use_wandb:
+                wandb.log({"dice": scores["dice"], "iou": scores["iou"], "precision": scores["precision"], "recall": scores["recall"], "loss": sum(losses)/len(losses)})
+            if best_loss > scores['dice']:
+                best_loss = scores['dice'] 
+                torch.save(model.state_dict(), f'{model_save_dir}/best_model.pt')
+        elif use_wandb:
+            wandb.log({"loss": sum(losses)/len(losses)})
+    return scores
+
+def train_from_last_checkpoint(model:Sam, trainloader:DataLoader, optimizer:Optimizer, epochs:int, loss_fn:callable, evalloader:DataLoader=None, model_save_dir:str=None, device:str='cuda', verbose:bool=True, use_wandb:bool=False, last_epoch:int=0) -> dict:
+    '''Function to train a model from a last checkpoint on a dataloader.
+    model: nn.Module, model to train
+    trainloader: DataLoader, dataloader to use for the training
+    optimizer: Adam, optimizer to use for the training
+    epochs: int, number of epochs to train the model
+    evalloader: DataLoader, If provided, evaluate the model at each epochs on it. Default: None
+    model_save_dir: str, If provided, save the model at each epochs. Also save the best model (evaluation loss) if evalloader is provided. Default: None
+    device: str, device to use for the training
+    last_epoch: int, last epoch trained. Default: 0
+    Returns: dict, dictionary with the training metrics'''
+    best_loss = float('inf')
+    for epoch in range(last_epoch, epochs):
+        losses = []
+        for data, mask in tqdm(trainloader, disable=not verbose, desc=f'Epoch {epoch+1}/{epochs} - Training'):
+            mask = mask.to(device)
+            optimizer.zero_grad()
+            pred_model, pred_iou = model(data, multimask_output=True)
             loss = loss_fn(pred_model.float(), mask.float())
             loss.backward()
             optimizer.step()
@@ -79,7 +124,8 @@ def train_loop(model:Sam, trainloader:DataLoader, optimizer:Optimizer, epochs:in
         if verbose:
             print(f'Loss: {sum(losses)/len(losses)}')
         if model_save_dir is not None:
-            torch.save(model.state_dict(), f'{model_save_dir}/model{epoch}.pt')
+            torch.save(model.state_dict(), f'{model_save_dir}/last_model.pt')
+            torch.save({'epoch': epoch, 'optimizer': optimizer.state_dict()}, f'{model_save_dir}/last_checkpoint.pt')
         if evalloader is not None:
             scores = eval_loop(model, evalloader, device)
             print(f'Evaluation - Dice: {scores["dice"]}, IoU: {scores["iou"]}, Precision: {scores["precision"]}, Recall: {scores["recall"]}')

@@ -236,7 +236,7 @@ class SAMDataset(AbstractSAMDataset):
         '''Load image embeddings'''
         self.img_embeddings = []
         for f in os.listdir(self.root + 'img_embeddings/'):
-            self.img_embeddings.append(torch.load(self.root + 'img_embeddings/' + f))
+            self.img_embeddings.append(torch.load(self.root + 'img_embeddings/' + f).to('cpu'))
 
     def __getitem__(self, idx:int) -> tuple:
         img = plt.imread(self.images[idx])

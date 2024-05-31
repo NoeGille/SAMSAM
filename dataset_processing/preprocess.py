@@ -15,7 +15,7 @@ def to_dict(img:np.ndarray, prompts:dict[str, np.ndarray], use_img_embeddings:bo
     '''Convert an element from an AbstractSAMDataset to a valid dictionnary regarding 
     Sam class forward method specification.'''
     if use_img_embeddings:
-        processed_img = img
+        processed_img = img.to(device)
         original_size = (1024, 1024)
     else:
         processed_img = torch.from_numpy(img.copy()).permute(2, 0, 1).float().to(device)
@@ -27,8 +27,8 @@ def to_dict(img:np.ndarray, prompts:dict[str, np.ndarray], use_img_embeddings:bo
         point_labels = torch.ones(len(prompts['points'])).float().to(device)
         neg_point_coords = torch.tensor(prompts['neg_points']).float().to(device)
         neg_point_labels = torch.zeros(len(prompts['neg_points'])).float().to(device)
-        output['point_coords'] = torch.cat([point_coords, neg_point_coords], dim=0).unsqueeze(0)
-        output['point_labels'] = torch.cat([point_labels, neg_point_labels], dim=0).unsqueeze(0)
+        output['point_coords'] = torch.cat([point_coords, neg_point_coords], dim=0).unsqueeze(0).to(device)
+        output['point_labels'] = torch.cat([point_labels, neg_point_labels], dim=0).unsqueeze(0).to(device)
     elif prompts['points'] is not None:
         output['point_coords'] = torch.tensor(prompts['points']).float().unsqueeze(0).to(device)
         output['point_labels'] = torch.ones(len(prompts['points'])).float().unsqueeze(0).to(device)

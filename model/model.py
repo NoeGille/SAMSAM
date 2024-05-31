@@ -59,7 +59,6 @@ class TrainableSam(Sam):
               C is determined by multimask_output, and (H, W) is the
               original size of the image.
         """
-        print('INSIDE MODEL')
         if self.img_embeddings_as_input:
             input_images = torch.stack([x["image"] for x in batched_input], dim=0).squeeze(0).squeeze(1)
             image_embeddings = input_images

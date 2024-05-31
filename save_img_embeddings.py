@@ -4,11 +4,10 @@ from argparse import ArgumentParser
 
 import numpy as np
 import torch
-from torch.utils.data import DataLoader
-from tqdm import tqdm
-
 from dataset_processing.dataset import SAMDataset
 from model.model import TrainableSam, load_model
+from torch.utils.data import DataLoader
+from tqdm import tqdm
 from utils.config import load_config
 
 
@@ -51,6 +50,22 @@ def save_prompts(config:dict):
     prompts = dataset.prompts
     torch.save(prompts, f'{config.cytomine.dataset_path}prompts.pt')
 
+def split_dataset(config:dict, train_ratio:float=0.5, seed:int=None):
+    '''Split a dataset into train / test.
+    Move splits into separate folders.'''
+    files = os.listdir(config.cytomine.dataset_path + '/processed/')
+    if seed is not None:
+        np.random.seed(seed)
+    suffled_files = np.random.permutation(files)
+    train_files = suffled_files[:int(len(files)*train_ratio)]
+    test_files = suffled_files[int(len(files)*(1 - train_ratio)):]
+    print(f'{len(train_files)} train files, {len(test_files)} test files')
+    os.makedirs(config.cytomine.dataset_path + '/train/', exist_ok=True)
+    os.makedirs(config.cytomine.dataset_path + '/test/', exist_ok=True)
+    for file in train_files:
+        os.rename(config.cytomine.dataset_path + '/processed/' + file, config.cytomine.dataset_path + '/train/processed/' + file)
+    for file in test_files:
+        os.rename(config.cytomine.dataset_path + '/processed/' + file, config.cytomine.dataset_path + '/test/processed/' + file)
 
 if __name__ == '__main__':
     parser = ArgumentParser(description='Save img embeddings in file for further use. Allows to train SAM model without touching its image encoder')
@@ -59,3 +74,4 @@ if __name__ == '__main__':
     config = load_config(args.config)
     save_img_embeddings(config)
     save_prompts(config)
+    #split_dataset(config)

@@ -1,0 +1,1 @@
+{"loss": 0.025979392552593104, "_timestamp": 1717096495.9288816, "_runtime": 17929.74198269844, "_step": 199, "dice": 0.8724773926210044, "iou": NaN, "precision": NaN, "recall": NaN, "_wandb": {"runtime": 17929}}
