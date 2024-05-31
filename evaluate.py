@@ -71,7 +71,7 @@ def eval_loop(model:nn.Module, dataloader:DataLoader, device:str='cuda', input_m
     model.return_iou = False
     with torch.no_grad():
         for data, mask in tqdm(dataloader):
-            pred = model(data, multimask_output=True, binary_mask_output=True)
+            pred, _ = model(data, multimask_output=True, binary_mask_output=True)
             best_pred = pred.cpu().numpy()
             best_pred = np.array(best_pred, dtype=np.uint8)
             mask = np.array(mask, dtype=np.uint8)
