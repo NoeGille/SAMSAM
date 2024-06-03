@@ -11,8 +11,8 @@ This repository contains the code for web scraping data from cytomine platform, 
 Example of the results can be seen in notebooks
 
 ## TODO
-- [ ] Implement training pipeline
-- [ ] Implement train/test split
+- [x] Implement training pipeline
+- [x] Implement train/test split
 - [ ] Implement interactive prompting tool for the user
 
 ## Installation
