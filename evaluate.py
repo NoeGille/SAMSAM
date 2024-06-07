@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from cv2 import INTER_NEAREST, resize
-from dataset_processing.dataset import SAMDataset
+from dataset_processing.dataset import AugmentedSamDataset, SAMDataset
 from dataset_processing.preprocess import collate_fn
 from model.model import load_model
 from sklearn.metrics import f1_score, jaccard_score, precision_score, recall_score
@@ -41,20 +41,23 @@ def evaluate(dataset_path:str, model_path:str, model_type='vit_b', n_points:int=
 def evaluate_with_config(config:dict) -> dict[str,list]:
     '''Function to evaluate a model with a configuration dictionary. Please refers to load_config() function from .utils.config.'''
     prompt_type = {'points':config.dataset.points, 'box':config.dataset.box, 'neg_points':config.dataset.negative_points, 'mask':config.dataset.mask_prompt}
-    dataset = SAMDataset(root=config.cytomine.dataset_path,
-                            prompt_type=prompt_type,
+    valid_dataset = AugmentedSamDataset(root=config.evaluate.valid_dataset_path,
+                            #prompt_type={'points':config.dataset.points, 'box':config.dataset.box, 'neg_points':config.dataset.negative_points, 'mask':config.dataset.mask_prompt},
                             n_points=config.dataset.n_points,
                             n_neg_points=config.dataset.n_neg_points,
                             verbose=True,
                             to_dict=True,
-                            neg_points_inside_box=config.dataset.negative_points_inside_box,
-                            points_near_center=config.dataset.points_near_center,
+                            use_img_embeddings=config.training.use_img_embeddings,
+                            #neg_points_inside_box=config.dataset.negative_points_inside_box,
+                            #points_near_center=config.dataset.points_near_center,
                             random_box_shift=config.dataset.random_box_shift,
                             mask_prompt_type=config.dataset.mask_prompt_type,
-                            box_around_mask=config.dataset.box_around_prompt_mask)
-    dataloader = DataLoader(dataset, batch_size=config.training.batch_size, shuffle=False, collate_fn=collate_fn)
-    model = load_model(config.sam.checkpoint_path, config.sam.model_type)
-    scores = eval_loop(model, dataloader, config.misc.device, config.evaluate.input_mask_eval, return_mean=False)
+                            #box_around_mask=config.dataset.box_around_prompt_mask,
+                            load_on_cpu=True
+    )
+    dataloader = DataLoader(valid_dataset, batch_size=config.training.batch_size, shuffle=False, collate_fn=collate_fn)
+    model = load_model(config.sam.checkpoint_path, config.sam.model_type, img_embeddings_as_input=config.training.use_img_embeddings, return_iou=True)
+    scores = test_loop(model, dataloader, config.misc.device, config.evaluate.input_mask_eval, return_mean=False)
     return scores
 
 def eval_loop(model:nn.Module, dataloader:DataLoader, device:str='cuda', input_mask_eval:bool=False, return_mean:bool=True) -> dict:
@@ -65,14 +68,16 @@ def eval_loop(model:nn.Module, dataloader:DataLoader, device:str='cuda', input_m
     input_mask_eval: bool, if True, evaluate the input mask too
     return_mean: bool, if True, return the mean of the evaluation metrics
     Returns: dict, dictionary with the evaluation metrics'''
-    scores = {'dice':[], 'iou':[], 'precision':[], 'recall':[], 'dice_input':[], 'iou_input':[], 'precision_input':[], 'recall_input':[]}
+    scores = {'BCE':[],'dice':[], 'iou':[], 'precision':[], 'recall':[], 'dice_input':[], 'iou_input':[], 'precision_input':[], 'recall_input':[]}
     model.to(device)
     model.eval()
     model.return_iou = False
     with torch.no_grad():
         for data, mask in tqdm(dataloader):
-            pred, _ = model(data, multimask_output=True, binary_mask_output=True)
-            best_pred = pred.cpu().numpy()
+            pred = model(data, multimask_output=True, binary_mask_output=False)
+            loss = nn.BCEWithLogitsLoss()(pred.float(), mask.to(device).float())
+            scores['BCE'].append(loss.item())
+            '''best_pred = pred.cpu().numpy()
             best_pred = np.array(best_pred, dtype=np.uint8)
             mask = np.array(mask, dtype=np.uint8)
             for i in range(len(data)):
@@ -91,13 +96,44 @@ def eval_loop(model:nn.Module, dataloader:DataLoader, device:str='cuda', input_m
                     scores['dice_input'].append(f1_score(y_true, y_input)) 
                     #scores['iou_input'].append(jaccard_score(y_true, y_input))
                     #scores['precision_input'].append(precision_score(y_true, y_input, zero_division=1))
-                    #scores['recall_input'].append(recall_score(y_true, y_input, zero_division=0))
+                    #scores['recall_input'].append(recall_score(y_true, y_input, zero_division=0))'''
+    if return_mean:
+        for key in scores.keys():
+            scores['BCE'] = np.mean(scores['BCE'])
+    model.return_iou = True
+    return scores
+
+def test_loop(model:nn.Module, dataloader:DataLoader, device:str='cuda', input_mask_eval:bool=False, return_mean:bool=True) -> dict:
+    scores = {'dice':[], 'iou':[], 'precision':[], 'recall':[], 'dice_input':[], 'iou_input':[], 'precision_input':[], 'recall_input':[]}
+    model.to(device)
+    model.eval()
+    with torch.no_grad():
+        for data, mask in tqdm(dataloader):
+            pred,_ = model(data, multimask_output=True, binary_mask_output=True)
+            best_pred = pred.cpu().numpy()
+            best_pred = np.array(best_pred, dtype=np.uint8)
+            mask = np.array(mask, dtype=np.uint8)
+            for i in range(len(data)):
+                y_pred = best_pred[i]
+                y_true = mask[i]
+                y_true = mask[i].flatten()
+                y_pred = best_pred[i].flatten()
+                scores['dice'].append(f1_score(y_true, y_pred))
+                #scores['iou'].append(jaccard_score(y_true, y_pred))
+                #scores['precision'].append(precision_score(y_true, y_pred, zero_division=1))
+                #scores['recall'].append(recall_score(y_true, y_pred, zero_division=0))
+                if input_mask_eval:
+                    input_mask = resize(data[i]['mask_inputs'].cpu().numpy()[0][0], (IMG_RESOLUTION, IMG_RESOLUTION), interpolation=INTER_NEAREST)
+                    y_input = input_mask.flatten()
+                    scores['dice_input'].append(f1_score(y_true, y_input)) 
+                    #scores['iou_input'].append(jaccard_score(y_true, y_input))
+                    #scores['precision_input'].append(precision_score(y_true, y_input, zero_division=1))
+                    #scores['recall_input'].append(recall_score(y_true, y_input, zero_division=0))'''
     if return_mean:
         for key in scores.keys():
             scores[key] = np.mean(scores[key])
     model.return_iou = True
     return scores
-
 if __name__ == '__main__':
     parser = ArgumentParser(description='Evaluate a batch of images using a trained model.')
     parser.add_argument('--config', required=False, type=str, help='Path to the configuration file. Default: ../config.toml', default='../config.toml')

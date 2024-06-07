@@ -5,7 +5,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import wandb
-from dataset_processing.dataset import AugmentedSamDataset
+from dataset_processing.dataset import (
+    AugmentedSamDataset,
+    SamDatasetFromFiles,
+    filter_dataset,
+)
 from dataset_processing.preprocess import collate_fn
 from evaluate import eval_loop
 from model.model import load_model
@@ -21,43 +25,61 @@ from utils.focal_loss import SamLoss
 
 def train_with_config(config:dict):
     '''Train a model with a configuration dictionary. Please refers to load_config() function from .utils.config.'''
-    model = load_model(config.sam.checkpoint_path, config.sam.model_type, img_embeddings_as_input=config.training.use_img_embeddings, return_iou=True).to(device=config.misc.device)
+    model = load_model(config.sam.checkpoint_path, config.sam.model_type, img_embeddings_as_input=config.training.use_img_embeddings, return_iou=True).to('cuda')
     print(model.get_nb_parameters(img_encoder=True))
-    model = nn.DataParallel(model)
-    dataset = AugmentedSamDataset(root=config.cytomine.dataset_path,
+    use_dataset = [True, True, False]
+    train_dataset = SamDatasetFromFiles(root=config.cytomine.dataset_path,
                             #prompt_type={'points':config.dataset.points, 'box':config.dataset.box, 'neg_points':config.dataset.negative_points, 'mask':config.dataset.mask_prompt},
                             n_points=config.dataset.n_points,
                             n_neg_points=config.dataset.n_neg_points,
                             verbose=True,
                             to_dict=True,
                             use_img_embeddings=config.training.use_img_embeddings,
-                            #neg_points_inside_box=config.dataset.negative_points_inside_box,
-                            #points_near_center=config.dataset.points_near_center,
                             random_box_shift=config.dataset.random_box_shift,
                             mask_prompt_type=config.dataset.mask_prompt_type,
                             #box_around_mask=config.dataset.box_around_prompt_mask,
-                            load_on_cpu=True
+                            load_on_cpu=True,
+                            filter_files=lambda x: filter_dataset(x, use_dataset)
+    )
+    valid_dataset = SamDatasetFromFiles(root=config.evaluate.valid_dataset_path,
+                            #prompt_type={'points':config.dataset.points, 'box':config.dataset.box, 'neg_points':config.dataset.negative_points, 'mask':config.dataset.mask_prompt},
+                            n_points=config.dataset.n_points,
+                            n_neg_points=config.dataset.n_neg_points,
+                            verbose=True,
+                            to_dict=True,
+                            use_img_embeddings=config.training.use_img_embeddings,
+                            random_box_shift=config.dataset.random_box_shift,
+                            mask_prompt_type=config.dataset.mask_prompt_type,
+                            load_on_cpu=True,
+                            filter_files=lambda x: filter_dataset(x, use_dataset)
     )
     if config.misc.wandb:
         wandb.init(project='samsam',
                     config=config)
-    train_dataset, eval_dataset = random_split(dataset, config.training.splits, generator=torch.Generator().manual_seed(42))
     trainloader = DataLoader(train_dataset, batch_size=config.training.batch_size, shuffle=True, collate_fn=collate_fn)
-    evalloader = DataLoader(eval_dataset, batch_size=config.training.batch_size, shuffle=False, collate_fn=collate_fn)
+    validloader = DataLoader(valid_dataset, batch_size=config.training.batch_size, shuffle=False, collate_fn=collate_fn)
     optimizer = torch.optim.Adam(model.parameters(), lr=config.training.lr)
     loss_fn = BCEWithLogitsLoss()
     if config.training.train_from_last_checkpoint:
         checkpoint = torch.load(config.training.model_save_dir+'/last_checkpoint.pt')
         model.load_state_dict(torch.load(config.training.model_save_dir+'/last_model.pt'))
         optimizer.load_state_dict(checkpoint['optimizer'])
-        return train_from_last_checkpoint(model, trainloader, optimizer, config.training.epochs, loss_fn, evalloader, config.training.model_save_dir, config.misc.device, use_wandb=config.misc.wandb, last_epoch=checkpoint['epoch'])
+        return train_from_last_checkpoint(model, trainloader, optimizer, config.training.epochs, loss_fn, validloader, config.training.model_save_dir, config.misc.device, use_wandb=config.misc.wandb, last_epoch=checkpoint['epoch'])
     
     if config.training.eval_every_epoch:
-        return train_loop(model, trainloader, optimizer, config.training.epochs, loss_fn, evalloader, config.training.model_save_dir, config.misc.device, use_wandb=config.misc.wandb)
+        return train_loop(model, trainloader, optimizer, config.training.epochs, loss_fn, validloader, config.training.model_save_dir, config.misc.device, use_wandb=config.misc.wandb)
     else:
         return train_loop(model, trainloader, optimizer, config.training.epochs, loss_fn, None, config.training.model_save_dir, config.misc.device, use_wandb=config.misc.wandb)
 
-def train_loop(model:Sam, trainloader:DataLoader, optimizer:Optimizer, epochs:int, loss_fn:callable, evalloader:DataLoader=None, model_save_dir:str=None, device:str='cuda', verbose:bool=True, use_wandb:bool=False) -> dict:
+def data_to_gpu(data:list[dict], device:str='cuda') -> list[dict]:
+    '''Move data to a device.'''
+    for value in data:
+        for key in value:
+            if type(value[key]) == torch.Tensor :
+                value[key] = value[key].to(device)
+    return data
+
+def train_loop(model:Sam, trainloader:DataLoader, optimizer:Optimizer, epochs:int, loss_fn:callable, evalloader:DataLoader=None, model_save_dir:str=None, device:str='cpu', verbose:bool=True, use_wandb:bool=False) -> dict:
     '''Function to train a model on a dataloader.
     model: nn.Module, model to train
     trainloader: DataLoader, dataloader to use for the training
@@ -71,9 +93,9 @@ def train_loop(model:Sam, trainloader:DataLoader, optimizer:Optimizer, epochs:in
     for epoch in range(epochs):
         losses = []
         for data, mask in tqdm(trainloader, disable=not verbose, desc=f'Epoch {epoch+1}/{epochs} - Training'):
-            mask = mask.to(device)
+            data = data_to_gpu(data, 'cuda')
+            mask = mask.to('cuda')
             optimizer.zero_grad()
-            #pred_model, pred_iou = model(data, multimask_output=True)
             pred_model, pred_iou = model(data, multimask_output=True)
             loss = loss_fn(pred_model.float(), mask.float())
             loss.backward()
@@ -87,17 +109,17 @@ def train_loop(model:Sam, trainloader:DataLoader, optimizer:Optimizer, epochs:in
             torch.save({'epoch': epoch, 'optimizer': optimizer.state_dict()}, f'{model_save_dir}/last_checkpoint.pt')
         if evalloader is not None:
             scores = eval_loop(model, evalloader, device)
-            print(f'Evaluation - Dice: {scores["dice"]}, IoU: {scores["iou"]}, Precision: {scores["precision"]}, Recall: {scores["recall"]}')
+            print(f'Evaluation - BCE{scores["BCE"]}, Dice: {scores["dice"]}, IoU: {scores["iou"]}, Precision: {scores["precision"]}, Recall: {scores["recall"]}')
             if use_wandb:
-                wandb.log({"dice": scores["dice"], "iou": scores["iou"], "precision": scores["precision"], "recall": scores["recall"], "loss": sum(losses)/len(losses)})
-            if best_loss > scores['dice']:
-                best_loss = scores['dice'] 
+                wandb.log({"bce": scores["BCE"], "dice": scores["dice"], "iou": scores["iou"], "precision": scores["precision"], "recall": scores["recall"], "loss": sum(losses)/len(losses)})
+            if best_loss > scores['BCE']:
+                best_loss = scores['BCE'] 
                 torch.save(model.state_dict(), f'{model_save_dir}/best_model.pt')
         elif use_wandb:
             wandb.log({"loss": sum(losses)/len(losses)})
     return scores
 
-def train_from_last_checkpoint(model:Sam, trainloader:DataLoader, optimizer:Optimizer, epochs:int, loss_fn:callable, evalloader:DataLoader=None, model_save_dir:str=None, device:str='cuda', verbose:bool=True, use_wandb:bool=False, last_epoch:int=0) -> dict:
+def train_from_last_checkpoint(model:Sam, trainloader:DataLoader, optimizer:Optimizer, epochs:int, loss_fn:callable, evalloader:DataLoader=None, model_save_dir:str=None, device:str='cpu', verbose:bool=True, use_wandb:bool=False, last_epoch:int=0) -> dict:
     '''Function to train a model from a last checkpoint on a dataloader.
     model: nn.Module, model to train
     trainloader: DataLoader, dataloader to use for the training

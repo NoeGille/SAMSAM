@@ -50,28 +50,28 @@ def save_prompts(config:dict):
     prompts = dataset.prompts
     torch.save(prompts, f'{config.cytomine.dataset_path}prompts.pt')
 
-def split_dataset(config:dict, train_ratio:float=0.5, seed:int=None):
+def split_dataset(config:dict, train_ratio:float=0.8, seed:int=None):
     '''Split a dataset into train / test.
     Move splits into separate folders.'''
-    files = os.listdir(config.cytomine.dataset_path + '/processed/')
+    files = os.listdir(config.cytomine.dataset_path + '/train/processed/')
     if seed is not None:
         np.random.seed(seed)
     suffled_files = np.random.permutation(files)
-    train_files = suffled_files[:int(len(files)*train_ratio)]
-    test_files = suffled_files[int(len(files)*(1 - train_ratio)):]
+    train_files = suffled_files[:int(len(files)*(1 -train_ratio))]
+    test_files = suffled_files[int(len(files)*(train_ratio)):]
     print(f'{len(train_files)} train files, {len(test_files)} test files')
     os.makedirs(config.cytomine.dataset_path + '/train/', exist_ok=True)
-    os.makedirs(config.cytomine.dataset_path + '/test/', exist_ok=True)
-    for file in train_files:
-        os.rename(config.cytomine.dataset_path + '/processed/' + file, config.cytomine.dataset_path + '/train/processed/' + file)
+    os.makedirs(config.cytomine.dataset_path + '/valid/', exist_ok=True)
+    #for file in train_files:
+    #    os.rename(config.cytomine.dataset_path + file, config.cytomine.dataset_path + '/train/processed/' + file)
     for file in test_files:
-        os.rename(config.cytomine.dataset_path + '/processed/' + file, config.cytomine.dataset_path + '/test/processed/' + file)
+        os.rename(config.cytomine.dataset_path + 'train/processed/' + file, config.cytomine.dataset_path + '/valid/processed/' + file)
 
 if __name__ == '__main__':
     parser = ArgumentParser(description='Save img embeddings in file for further use. Allows to train SAM model without touching its image encoder')
     parser.add_argument('--config', required=False, type=str, help='Path to the configuration file. Default: config.toml', default='config.toml')
     args = parser.parse_args()
     config = load_config(args.config)
-    save_img_embeddings(config)
+    #save_img_embeddings(config)
     save_prompts(config)
     #split_dataset(config)

@@ -236,6 +236,7 @@ class SAMDataset(AbstractSAMDataset):
         '''Load image embeddings'''
         self.img_embeddings = []
         for f in os.listdir(self.root + 'img_embeddings/'):
+            print('Not working')
             self.img_embeddings.append(torch.load(self.root + 'img_embeddings/' + f).to('cpu'))
 
     def __getitem__(self, idx:int) -> tuple:
@@ -259,7 +260,7 @@ class AugmentedSamDataset(SAMDataset):
     def __init__(self, root:str, use_img_embeddings:bool=True,
                  n_points:int=1, n_neg_points:int=1, zoom_out:float=1.0, verbose:bool=False, 
                  random_state:int=None, to_dict:bool=True, random_box_shift:int=20, mask_prompt_type:str='truth',
-                 load_on_cpu:bool=False):
+                 load_on_cpu:bool=False, filter_files:callable=None):
         '''Initialize SAMDataset class.
         root: str, path to the dataset directory
         transform: callable, transform to apply to the images and masks
@@ -275,6 +276,7 @@ class AugmentedSamDataset(SAMDataset):
         load_on_cpu: bool, if True, the entire dataset will be loaded on the CPU RAM. Data loading will be faster but will consume more memory. Default: False
         '''
         prompt_type = {'points':False, 'box':False, 'neg_points':False, 'mask':False}
+        self.filter_files = filter_files
         neg_points_inside_box = True
         points_near_center = 4
         box_around_mask = False
@@ -293,7 +295,131 @@ class AugmentedSamDataset(SAMDataset):
             self.masks = [plt.imread(mask) for mask in self.masks]
         self.prompts = torch.load(self.root + 'prompts.pt')
         prompt_type = {'points':True, 'box':True, 'neg_points':True, 'mask':True}
+        
+
+    def __getitem__(self, idx:int) -> tuple:
+        img_idx = idx % len(self.images)
+        prompt_idx = idx // len(self.images)
+        if self.load_on_cpu:
+            img = self.images[img_idx]
+            mask = self.masks[img_idx]
+        else:
+            img = plt.imread(self.images[img_idx])
+            mask = plt.imread(self.masks[img_idx])
+        prompt = {'points':None, 'box':None, 'neg_points':None, 'mask':None}
+        prompts_combinaisons = [['mask', 'points', 'neg_points'],
+                                ['mask'],
+                                ['box'],
+                                ['box', 'points', 'neg_points']]
+        for key in prompts_combinaisons[prompt_idx]:
+            prompt[key] = self.prompts[key][img_idx]
+        if self.use_img_embeddings:
+            return to_dict(self.img_embeddings[img_idx], prompt, self.use_img_embeddings), np.where(mask > 0, 1, 0)
+        if self.transform:
+            img, mask = self.transform(img, mask)
+        if self.to_dict:
+            return to_dict(img, prompt), np.where(mask > 0, 1, 0)
+        return img, np.where(mask > 0, 1, 0), prompt
+    
+    def _load_data(self):
+        '''Load images and masks. Allows to filter files.'''
+    
+        for f in os.listdir(self.root + 'processed/'):
+            print(f)
+            if self.filter_files is not None:
+                if not self.filter_files(f):
+                    continue
+            for g in os.listdir(self.root + 'processed/' + f):
+                if g.endswith('.jpg'):
+                    if 'mask' in g:
+                        self.masks.append(self.root + 'processed/' + f + '/' + g)
+                    else:
+                        self.images.append(self.root + 'processed/' + f + '/' + g)
+    
+    def _load_img_embeddings(self):
+        '''Load image embeddings'''
+        self.img_embeddings = []
+        for f in os.listdir(self.root + 'img_embeddings/'):
+            if self.filter_files is not None:
+                if not self.filter_files(f):
+                    continue
+            self.img_embeddings.append(torch.load(self.root + 'img_embeddings/' + f).to('cpu'))
+
+    def __len__(self):
+        return len(self.images) * 4
+
+class SamDatasetFromFiles(AbstractSAMDataset):
+    '''Prepare a dataset for segmentation by Segment Anything Model. Checkout AbstractSAMDataset for more information'''
+
+    def __init__(self, root:str, transform=None, use_img_embeddings:bool=False,
+                 prompt_type:dict={'points':False, 'box': False, 'neg_points':False, 'mask':False}, 
+                 n_points:int=1, n_neg_points:int=1, zoom_out:float=1.0, verbose:bool=False, 
+                 random_state:int=None, to_dict:bool=True, neg_points_inside_box:bool=False, 
+                 points_near_center:float=-1, random_box_shift:int=0, mask_prompt_type:str='truth', 
+                 box_around_mask:bool=False, filter_files:callable=None, load_on_cpu:bool=False):
+        '''Initialize SAMDataset class.
+        Can only be initialized from files obtained from save_img_embeddings.py script.
+        '''
+        self.root = root
+        self.transform = transform
+        self.use_img_embeddings = use_img_embeddings
+        self.images = []
+        self.masks = []
+        self.prompts = []
+        self.prompt_type = prompt_type
+        self.verbose = verbose
+        self.n_points = n_points
+        self.n_neg_points = n_neg_points
+        self.near_center = points_near_center
+        self.inside_box = neg_points_inside_box
+        self.to_dict = to_dict
+        self.zoom_out = zoom_out
+        self.prompts = torch.load(self.root + 'prompts.pt')
+        print(len(self.prompts))
+        prompt_type = {'points':True, 'box':True, 'neg_points':True, 'mask':True}
+        self.load_on_cpu = load_on_cpu
+        self.filter_files = filter_files
+        if random_state is not None:
+            torch.manual_seed(random_state)
+        if self.verbose:
+            print('Loading images and masks paths...')
+        self._load_data()
+        if self.use_img_embeddings:
+            self._load_img_embeddings()
+        if load_on_cpu:
+            self.images = [plt.imread(img) for img in self.images]
+            self.masks = [plt.imread(mask) for mask in self.masks]
+        if self.verbose:
+            print('Done!')
+
+    def _load_data(self):
+        '''Load images and masks. Allows to filter files.'''
+        prompts_to_delete = []
+        for i, f in enumerate(os.listdir(self.root + 'processed/')):
             
+            if self.filter_files is not None:
+                if not self.filter_files(f):
+                    prompts_to_delete.append(i)
+                    continue
+            for g in os.listdir(self.root + 'processed/' + f):
+                if g.endswith('.jpg'):
+                    if 'mask' in g:
+                        self.masks.append(self.root + 'processed/' + f + '/' + g)
+                    else:
+                        self.images.append(self.root + 'processed/' + f + '/' + g)
+        for key in self.prompts:
+            self.prompts[key] = np.delete(self.prompts[key], prompts_to_delete, axis=0)
+    
+    def _load_img_embeddings(self):
+        '''Load image embeddings'''
+        self.img_embeddings = []
+        
+        for i, f in enumerate(os.listdir(self.root + 'img_embeddings/')):
+            if self.filter_files is not None: 
+                if not self.filter_files(f):
+                    continue
+            self.img_embeddings.append(torch.load(self.root + 'img_embeddings/' + f).to('cpu'))
+        
 
     def __getitem__(self, idx:int) -> tuple:
         img_idx = idx % len(self.images)
@@ -320,6 +446,11 @@ class AugmentedSamDataset(SAMDataset):
         return img, np.where(mask > 0, 1, 0), prompt
     
     def __len__(self):
-        return len(self.images) * 4
+            return len(self.images) * 4
 
-        
+def filter_dataset(file_name, datasets:list):
+    '''Filter datasets to keep only the ones.
+    datasets: List[str], list of boolean values to filter, True if the dataset is to keep, False otherwise.'''
+    file_name_dataset = file_name.split('_')[0]
+    return datasets[int(file_name_dataset)]
+

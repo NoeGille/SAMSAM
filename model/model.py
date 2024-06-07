@@ -111,7 +111,7 @@ class TrainableSam(Sam):
         else:
             return sum(p.numel() for p in self.mask_decoder.parameters()) + sum(p.numel() for p in self.prompt_encoder.parameters())
 
-def load_model(model_path:str, model_type:str='vit_b', img_embeddings_as_input:bool=False, return_iou:bool=False) -> TrainableSam:
+def load_model(model_path:str, model_type:str='vit_b', img_embeddings_as_input:bool=False, return_iou:bool=False,) -> TrainableSam:
     '''Function to load a trained model. The function returns a torch.nn.Module model.
     model_path: str, path to the model
     model_type: str in ["vit_b", "vit_h", "vit_l"], type of the model to load. Default: "vit_b"'''
@@ -219,6 +219,9 @@ def _build_sam(
     if checkpoint is not None:
         with open(checkpoint, "rb") as f:
             state_dict = torch.load(f)
+        '''for key in list(state_dict.keys()):
+            if key.startswith('module.'):
+                state_dict[key[7:]] = state_dict.pop(key)'''
         sam.load_state_dict(state_dict)
     return sam
 
