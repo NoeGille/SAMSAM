@@ -27,6 +27,7 @@ def train_with_config(config:dict):
     '''Train a model with a configuration dictionary. Please refers to load_config() function from .utils.config.'''
     model = load_model(config.sam.checkpoint_path, config.sam.model_type, img_embeddings_as_input=config.training.use_img_embeddings, return_iou=True).to('cuda')
     print(model.get_nb_parameters(img_encoder=True))
+    model = nn.DataParallel(model)
     use_dataset = [True, True, False]
     train_dataset = SamDatasetFromFiles(root=config.cytomine.dataset_path,
                             #prompt_type={'points':config.dataset.points, 'box':config.dataset.box, 'neg_points':config.dataset.negative_points, 'mask':config.dataset.mask_prompt},
