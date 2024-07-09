@@ -1,19 +1,8 @@
 # SAMSAM
 
-## <!> This works is currently under development <!>
+This repo aims to provide a simple way to train Segment Anything Model on digital pathology data.
 
-Experimenting with Segment Anything Model on digital pathology data
-
-<<<<<<< HEAD
-This project uses TOML config file with are not supported by standard Python library until Python11.
-
-<!> This works is currently under development <!>
-=======
-Comparison of different SAM based models for medical and digital pathology data on whole slide images.
-
-This repository contains the code for web scraping data from cytomine platform, preprocessing the data, training models with different architectures and comparing the results.
-
-Example of the results can be seen in notebooks
+This repository contains code to train Segment Anything Model on digital pathology image. Additionally, it offers scripts to scrap and preprocess data from cytomine platform.
 
 ## TODO
 - [x] Implement training pipeline
@@ -56,7 +45,7 @@ Please refers to the Cytomine API Documentation for more information. https://do
 
 ## Usage
 
-It is recommended to use the SAMDataset class from `dataset_processing/dataset.py` to load the data and give it to the model. The class handle the processing of the data including automatic annotation of the data.
+It is recommended to use the SAMDataset class from `dataset_processing/dataset.py` to load the data and give it to the model. The class handle the processing of the data including automatic prompting.
 
 SAM is used throught a child class named TrainableSam. This class simplifies the use of SAM in a training pipeline without changing the inner functioning of SAM.
 
@@ -68,19 +57,19 @@ As it is not mandatory to fine-tune the model, you can directly evaluate the mod
 
 Training is done through the TrainableSam class. You can refer to train.py in this case. You can either train the whole model (including the image encoder) or only the prompt encoder and decoder. In the latter case, use `save_img_embeddings.py` to save the image embeddings then `use_img_embeddings option` in `config.toml` to skip the image encoder part for faster training.
 
-### Thanks
-For the loss function implementation, thanks to Ma et al. .
-```bibtex	
-@article{LossOdyssey,
-title = {Loss Odyssey in Medical Image Segmentation},
-journal = {Medical Image Analysis},
-volume = {71},
-pages = {102035},
-year = {2021},
-author = {Jun Ma and Jianan Chen and Matthew Ng and Rui Huang and Yu Li and Chen Li and Xiaoping Yang and Anne L. Martel}
-doi = {https://doi.org/10.1016/j.media.2021.102035},
-url = {https://www.sciencedirect.com/science/article/pii/S1361841521000815}
+# Acknoledgement
+
+Thanks to Pierre GEURTS and Raphael MAREE for their help on this project.
+
+Moreover, Please consider to checkout the original Segment Anything Model paper for more details on the model architecture and training pipeline :
+```bibtex
+@misc{kirillov2023segment,
+      title={Segment Anything}, 
+      author={Alexander Kirillov and Eric Mintun and Nikhila Ravi and Hanzi Mao and Chloe Rolland and Laura Gustafson and Tete Xiao and Spencer Whitehead and Alexander C. Berg and Wan-Yen Lo and Piotr Dollár and Ross Girshick},
+      year={2023},
+      eprint={2304.02643},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV},
+      url={https://arxiv.org/abs/2304.02643}, 
 }
 ```
-## <!> This works is currently under development <!>
->>>>>>> develop
