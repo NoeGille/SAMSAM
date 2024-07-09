@@ -16,8 +16,6 @@ if __name__ == '__main__':
 
     # List of tuple of configurations modifications and output names of evaluation
     configurations = [
-        #({'cytomine': {'dataset_path': '../datasets/LBTD-NEO04/'}, 'dataset': {'points':False, 'negative_points': False, 'box':True, 'mask_prompt':True}}, 'LBTD-NEO04001'),
-        #({'cytomine': {'dataset_path': '../datasets/LBTD-NEO04/'}, 'dataset': {'points':True, 'negative_points': False, 'box':True, 'mask_prompt':True}}, 'LBTD-NEO04101'),
         ({'cytomine': {'dataset_path': '../datasets/LBTD-NEO04/'}, 'dataset': {'points':True, 'negative_points': True, 'box':False, 'mask_prompt':True}}, 'LBTD-NEO04110'),
         ({'cytomine': {'dataset_path': '../datasets/LBTD-NEO04/'}, 'dataset': {'points':True, 'negative_points': True, 'box':True, 'mask_prompt':True}}, 'LBTD-NEO04111'),
     ]

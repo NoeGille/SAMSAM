@@ -1,16 +1,9 @@
 title = "Config"
 
 [cytomine]
-
-#dataset_path = "../datasets/LBTD-AGDC10/test/"
 dataset_path = "../datasets/all/train/"
 project_id = '54149054'
 # list of users to consider for the annotations
-# LBTD
-#annotation_users_id = ['701', '23245043', '34451686', '8106092']
-# Camelyon16
-#annotation_users_id = ['10695763']
-# LBTD AGDC10
 annotation_users_id = ['23245043', '35984253']
 ROI_term_id = '25635386'
 random_shift = 0

@@ -77,26 +77,6 @@ def eval_loop(model:nn.Module, dataloader:DataLoader, device:str='cuda', input_m
             pred = model(data, multimask_output=True, binary_mask_output=False)
             loss = nn.BCEWithLogitsLoss()(pred.float(), mask.to(device).float())
             scores['BCE'].append(loss.item())
-            '''best_pred = pred.cpu().numpy()
-            best_pred = np.array(best_pred, dtype=np.uint8)
-            mask = np.array(mask, dtype=np.uint8)
-            for i in range(len(data)):
-                y_pred = best_pred[i]
-                y_true = mask[i]
-                y_true = mask[i].flatten()
-                y_pred = best_pred[i].flatten()
-                
-                scores['dice'].append(f1_score(y_true, y_pred))
-                #scores['iou'].append(jaccard_score(y_true, y_pred))
-                #scores['precision'].append(precision_score(y_true, y_pred, zero_division=1))
-                #scores['recall'].append(recall_score(y_true, y_pred, zero_division=0))
-                if input_mask_eval:
-                    input_mask = resize(data[i]['mask_inputs'].cpu().numpy()[0][0], (IMG_RESOLUTION, IMG_RESOLUTION), interpolation=INTER_NEAREST)
-                    y_input = input_mask.flatten()
-                    scores['dice_input'].append(f1_score(y_true, y_input)) 
-                    #scores['iou_input'].append(jaccard_score(y_true, y_input))
-                    #scores['precision_input'].append(precision_score(y_true, y_input, zero_division=1))
-                    #scores['recall_input'].append(recall_score(y_true, y_input, zero_division=0))'''
     if return_mean:
         for key in scores.keys():
             scores['BCE'] = np.mean(scores['BCE'])
@@ -119,21 +99,16 @@ def test_loop(model:nn.Module, dataloader:DataLoader, device:str='cuda', input_m
                 y_true = mask[i].flatten()
                 y_pred = best_pred[i].flatten()
                 scores['dice'].append(f1_score(y_true, y_pred))
-                #scores['iou'].append(jaccard_score(y_true, y_pred))
-                #scores['precision'].append(precision_score(y_true, y_pred, zero_division=1))
-                #scores['recall'].append(recall_score(y_true, y_pred, zero_division=0))
                 if input_mask_eval:
                     input_mask = resize(data[i]['mask_inputs'].cpu().numpy()[0][0], (IMG_RESOLUTION, IMG_RESOLUTION), interpolation=INTER_NEAREST)
                     y_input = input_mask.flatten()
                     scores['dice_input'].append(f1_score(y_true, y_input)) 
-                    #scores['iou_input'].append(jaccard_score(y_true, y_input))
-                    #scores['precision_input'].append(precision_score(y_true, y_input, zero_division=1))
-                    #scores['recall_input'].append(recall_score(y_true, y_input, zero_division=0))'''
     if return_mean:
         for key in scores.keys():
             scores[key] = np.mean(scores[key])
     model.return_iou = True
     return scores
+
 if __name__ == '__main__':
     parser = ArgumentParser(description='Evaluate a batch of images using a trained model.')
     parser.add_argument('--config', required=False, type=str, help='Path to the configuration file. Default: ../config.toml', default='../config.toml')
